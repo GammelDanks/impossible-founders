@@ -30,11 +30,25 @@ if input_text:
     try:
         # Parse the input text
         locations = []
-        for line in input_text.strip().split('\n'):
+              bad_lines = []
+        for idx, line in enumerate(input_text.strip().split('\n')):
             parts = [p.strip() for p in line.split(',')]
             if len(parts) == 3:
-                name, lat, lon = parts[0], float(parts[1]), float(parts[2])
-                locations.append((name, lat, lon))
+                try:
+                    name, lat, lon = parts[0], float(parts[1]), float(parts[2])
+                    locations.append((name, lat, lon))
+                except ValueError:
+                    bad_lines.append(line)
+            else:
+                bad_lines.append(line)
+
+        if bad_lines:
+            st.warning(f"Skipped {len(bad_lines)} invalid line(s):\\n" + '\\n'.join(bad_lines))
+
+        if len(locations) < 2:
+            st.error(\"Please provide at least two valid locations.\")
+            st.stop()
+
 
         # Convert to DataFrame
         df = pd.DataFrame(locations, columns=['Name', 'Latitude', 'Longitude'])
