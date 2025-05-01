@@ -22,6 +22,7 @@ Paste your coordinates below in this format:
 
 Example:
 Location A, 48.137154, 11.576124 Location B, 48.208174, 16.373819 Location C, 47.497913, 19.040236
+
 """)
 
 input_text = st.text_area("Paste coordinates here:", height=250)
@@ -30,7 +31,8 @@ if input_text:
     try:
         # Parse the input text
         locations = []
-              bad_lines = []
+        bad_lines = []
+
         for idx, line in enumerate(input_text.strip().split('\n')):
             parts = [p.strip() for p in line.split(',')]
             if len(parts) == 3:
@@ -43,12 +45,11 @@ if input_text:
                 bad_lines.append(line)
 
         if bad_lines:
-            st.warning(f"Skipped {len(bad_lines)} invalid line(s):\\n" + '\\n'.join(bad_lines))
+            st.warning(f"Skipped {len(bad_lines)} invalid line(s):\n" + '\n'.join(bad_lines))
 
         if len(locations) < 2:
-            st.error(\"Please provide at least two valid locations.\")
+            st.error("Please provide at least two valid locations.")
             st.stop()
-
 
         # Convert to DataFrame
         df = pd.DataFrame(locations, columns=['Name', 'Latitude', 'Longitude'])
@@ -84,10 +85,8 @@ if input_text:
         central_index = np.argmin(avg_dists)
         central_location = df.iloc[central_index]['Name']
         st.subheader("Most Central Location")
-        st.write(f"**{central_location}** is the most central location (lowest average distance to others: {avg_dists[central_index]:.2f} km)")
+        st.write(f"**{central_location}** is the most central location "
+                 f"(lowest average distance to others: {avg_dists[central_index]:.2f} km)")
 
     except Exception as e:
-        st.error(f"Error parsing input: {e}")
-
-
-
+        st.error(f"Error processing input: {e}")
