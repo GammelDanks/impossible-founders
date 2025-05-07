@@ -88,5 +88,14 @@ if input_text:
         st.write(f"**{central_location}** is the most central location "
                  f"(lowest average distance to others: {avg_dists[central_index]:.2f} km)")
 
+     # Allow user to select a location to view average distance to others
+        st.subheader("Average Distance and Covering Radius from a Selected Location")
+        selected_location = st.selectbox("Choose a location:", df['Name'])
+        selected_index = df[df['Name'] == selected_location].index[0]
+        avg_from_selected = distances[selected_index].sum() / (n - 1)
+        max_from_selected = distances[selected_index].max()
+        st.write(f"**Average distance from {selected_location} to all others:** {avg_from_selected:.2f} km")
+        st.write(f"**Minimum radius to cover all other locations from {selected_location}:** {max_from_selected:.2f} km")
+
     except Exception as e:
         st.error(f"Error processing input: {e}")
