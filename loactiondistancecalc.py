@@ -55,6 +55,7 @@ for i in range(num_addresses):
     address_inputs.append(addr)
 
 if st.button("Fetch Coordinates"):
+    st.session_state.addresses = []  # Clear previous entries
     new_addresses = []
     for i, addr in enumerate(address_inputs):
         if addr and len(addr.strip()) > 2:
@@ -73,6 +74,7 @@ st.subheader("Or Paste a List of Location Names (One Per Line)")
 bulk_input = st.text_area("Paste locations here:", height=200)
 
 if st.button("Fetch Coordinates from Bulk Input"):
+    st.session_state.addresses = []  # Clear previous entries
     new_bulk_addresses = []
     for line in bulk_input.strip().split('\n'):
         addr = line.strip()
