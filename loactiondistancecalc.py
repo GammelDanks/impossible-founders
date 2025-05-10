@@ -42,29 +42,37 @@ You can either:
 - Enter address names below and let the app find their coordinates.
 """)
 
+# Initialize session state for addresses
+if 'addresses' not in st.session_state:
+    st.session_state.addresses = []
+
 # Option to enter address-based locations
 st.subheader("Enter Address Locations")
 num_addresses = st.number_input("How many addresses would you like to enter?", min_value=1, max_value=20, value=3, step=1)
 address_inputs = []
 for i in range(num_addresses):
-    addr = st.text_input(f"Address {i + 1}")
+    addr = st.text_input(f"Address {i + 1}", key=f"addr_{i}")
     address_inputs.append(addr)
 
-addresses = []
 if st.button("Fetch Coordinates"):
+    new_addresses = []
     for i, addr in enumerate(address_inputs):
-        if addr:
-            lat, lon = get_coordinates(addr)
-            if lat is not None and lon is not None:
-                addresses.append((addr, lat, lon))
-            else:
-                st.warning(f"Could not find coordinates for: {addr}")
+        if addr and len(addr.strip()) > 2:
+            try:
+                lat, lon = get_coordinates(addr.strip())
+                if lat is not None and lon is not None:
+                    new_addresses.append((addr.strip(), lat, lon))
+                else:
+                    st.warning(f"Could not find coordinates for: {addr}")
+            except Exception as e:
+                st.warning(f"Error looking up '{addr}': {e}")
+    st.session_state.addresses = new_addresses
 
 # Text input for manual coordinates
 st.subheader("Or Paste Coordinates Manually")
 input_text = st.text_area("Paste coordinates here:", height=250)
 
-locations = addresses[:]
+locations = st.session_state.addresses[:]
 
 if input_text:
     try:
