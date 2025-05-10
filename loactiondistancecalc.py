@@ -18,22 +18,11 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": address, "format": "json"}
-        headers = {"User-Agent": "GeoDistanceApp"}
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-
-        if response.status_code != 200:
-            return None, None
-
+        response = requests.get(url, params=params, headers={"User-Agent": "GeoDistanceApp"})
         results = response.json()
-        if isinstance(results, list) and len(results) > 0:
-            lat = results[0].get("lat")
-            lon = results[0].get("lon")
-            if lat is not None and lon is not None:
-                return float(lat), float(lon)
-        return None, None
-
-    except Exception as e:
-        st.warning(f"Error fetching coordinates for '{address}': {e}")
+        if results:
+            return float(results[0]["lat"]), float(results[0]["lon"])
+    except:
         return None, None
 
 # Title
@@ -90,62 +79,70 @@ if input_text:
     except Exception as e:
         st.error(f"Error processing input: {e}")
 
-if len(locations) >= 2:
-    try:
-        # Convert to DataFrame
-        df = pd.DataFrame(locations, columns=['Name', 'Latitude', 'Longitude'])
+if len(locations) < 2 and not st.button("Retry with new input"):
+    st.info("Please enter at least two valid locations to proceed.")
+    st.stop()
 
-        # Display list of confirmed locations
-        st.subheader("Confirmed Locations and Coordinates")
-        st.dataframe(df)
+try:
+    # Convert to DataFrame
+    df = pd.DataFrame(locations, columns=['Name', 'Latitude', 'Longitude'])
 
-        # Shorten names for distance matrix
-        df['ShortName'] = df['Name'].apply(lambda x: ' '.join(x.split()[:2]))
+    # Display list of confirmed locations
+    st.subheader("Confirmed Locations and Coordinates")
+    st.dataframe(df)
 
-        # Create distance matrix
-        n = len(df)
-        distances = np.zeros((n, n))
+    # Shorten names for distance matrix
+    df['ShortName'] = df['Name'].apply(lambda x: ' '.join(x.split()[:2]))
 
-        for i in range(n):
-            for j in range(n):
-                if i != j:
-                    distances[i, j] = haversine(df.iloc[i]['Latitude'], df.iloc[i]['Longitude'],
-                                                df.iloc[j]['Latitude'], df.iloc[j]['Longitude'])
+    # Create distance matrix
+    n = len(df)
+    distances = np.zeros((n, n))
 
-        # Display distance matrix with shortened names
-        dist_df = pd.DataFrame(distances, columns=df['ShortName'], index=df['ShortName'])
-        st.subheader("Distance Matrix (km)")
-        st.dataframe(dist_df.style.format("{:.2f}"))
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                distances[i, j] = haversine(df.iloc[i]['Latitude'], df.iloc[i]['Longitude'],
+                                            df.iloc[j]['Latitude'], df.iloc[j]['Longitude'])
 
-        # Calculate statistics
-        upper_triangle = distances[np.triu_indices(n, k=1)]
-        total_distance = upper_triangle.sum()
-        avg_distance = upper_triangle.mean()
-        median_distance = np.median(upper_triangle)
+    # Display distance matrix with shortened names
+    dist_df = pd.DataFrame(distances, columns=df['ShortName'], index=df['ShortName'])
+    st.subheader("Distance Matrix (km)")
+    st.dataframe(dist_df.style.format("{:.2f}"))
 
-        st.subheader("Distance Summary")
-        st.write(f"**Total distance (sum of all unique pairs):** {total_distance:.2f} km")
-        st.write(f"**Average distance:** {avg_distance:.2f} km")
-        st.write(f"**Median distance:** {median_distance:.2f} km")
+    # Calculate statistics
+    upper_triangle = distances[np.triu_indices(n, k=1)]
+    total_distance = upper_triangle.sum()
+    avg_distance = upper_triangle.mean()
+    median_distance = np.median(upper_triangle)
 
-        # Find most central location (lowest average distance to all others)
-        avg_dists = distances.mean(axis=1)
-        central_index = np.argmin(avg_dists)
-        central_location = df.iloc[central_index]['Name']
-        st.subheader("Most Central Location")
-        st.write(f"**{central_location}** is the most central location "
-                 f"(lowest average distance to others: {avg_dists[central_index]:.2f} km)")
+    st.subheader("Distance Summary")
+    st.write(f"**Total distance (sum of all unique pairs):** {total_distance:.2f} km")
+    st.write(f"**Average distance:** {avg_distance:.2f} km")
+    st.write(f"**Median distance:** {median_distance:.2f} km")
 
-        # Allow user to select a location to view average distance to others
-        st.subheader("Average Distance and Covering Radius from a Selected Location")
+    # Find most central location (lowest average distance to all others)
+    avg_dists = distances.mean(axis=1)
+    median_dists = np.median(distances, axis=1)
+    central_index = np.argmin(avg_dists)
+    central_location = df.iloc[central_index]
+    st.subheader("Most Central Location")
+    st.write(f"**{central_location['Name']}** is the most central location ")
+    st.write(f"**Coordinates:** {central_location['Latitude']}, {central_location['Longitude']}")
+    st.write(f"**Average distance to all others:** {avg_dists[central_index]:.2f} km")
+    st.write(f"**Median distance to all others:** {median_dists[central_index]:.2f} km")
+
+    # Allow user to select a location to view average and median distance to others
+    if len(df) >= 2:
+        st.subheader("Distance Statistics from a Selected Location")
         selected_location = st.selectbox("Choose a location:", df['Name'])
         selected_index = df[df['Name'] == selected_location].index[0]
         avg_from_selected = distances[selected_index].sum() / (n - 1)
         max_from_selected = distances[selected_index].max()
+        median_from_selected = np.median(distances[selected_index][distances[selected_index] > 0])
+
         st.write(f"**Average distance from {selected_location} to all others:** {avg_from_selected:.2f} km")
+        st.write(f"**Median distance from {selected_location} to all others:** {median_from_selected:.2f} km")
         st.write(f"**Minimum radius to cover all other locations from {selected_location}:** {max_from_selected:.2f} km")
 
-    except Exception as e:
-        st.error(f"Error processing locations: {e}")
-else:
-    st.info("Please enter at least two valid locations to proceed.")
+except Exception as e:
+    st.error(f"Error processing locations: {e}")
