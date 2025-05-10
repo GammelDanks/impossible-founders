@@ -50,15 +50,20 @@ for i in range(num_addresses):
     addr = st.text_input(f"Address {i + 1}")
     address_inputs.append(addr)
 
-addresses = []
+aaddresses = []
 if st.button("Fetch Coordinates"):
     for i, addr in enumerate(address_inputs):
-        if addr:
-            lat, lon = get_coordinates(addr)
+        if not addr or len(addr.strip()) < 3:
+            st.warning(f"Address {i + 1} is too short or empty — skipped.")
+            continue
+        try:
+            lat, lon = get_coordinates(addr.strip())
             if lat is not None and lon is not None:
-                addresses.append((addr, lat, lon))
+                addresses.append((addr.strip(), lat, lon))
             else:
                 st.warning(f"Could not find coordinates for: {addr}")
+        except Exception as e:
+            st.warning(f"Error looking up '{addr}': {e}")
 
 # Text input for manual coordinates
 st.subheader("Or Paste Coordinates Manually")
