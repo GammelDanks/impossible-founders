@@ -18,11 +18,22 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": address, "format": "json"}
-        response = requests.get(url, params=params, headers={"User-Agent": "GeoDistanceApp"})
+        headers = {"User-Agent": "GeoDistanceApp"}
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            return None, None
+
         results = response.json()
-        if results:
-            return float(results[0]["lat"]), float(results[0]["lon"])
-    except:
+        if isinstance(results, list) and len(results) > 0:
+            lat = results[0].get("lat")
+            lon = results[0].get("lon")
+            if lat is not None and lon is not None:
+                return float(lat), float(lon)
+        return None, None
+
+    except Exception as e:
+        st.warning(f"Error fetching coordinates for '{address}': {e}")
         return None, None
 
 # Title
