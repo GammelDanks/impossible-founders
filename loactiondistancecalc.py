@@ -68,6 +68,25 @@ if st.button("Fetch Coordinates"):
                 st.warning(f"Error looking up '{addr}': {e}")
     st.session_state.addresses = new_addresses
 
+# Optional bulk address input
+st.subheader("Or Paste a List of Location Names (One Per Line)")
+bulk_input = st.text_area("Paste locations here:", height=200)
+
+if st.button("Fetch Coordinates from Bulk Input"):
+    new_bulk_addresses = []
+    for line in bulk_input.strip().split('\n'):
+        addr = line.strip()
+        if addr and len(addr) > 2:
+            try:
+                lat, lon = get_coordinates(addr)
+                if lat is not None and lon is not None:
+                    new_bulk_addresses.append((addr, lat, lon))
+                else:
+                    st.warning(f"Could not find coordinates for: {addr}")
+            except Exception as e:
+                st.warning(f"Error looking up '{addr}': {e}")
+    st.session_state.addresses.extend(new_bulk_addresses)
+
 # Text input for manual coordinates
 st.subheader("Or Paste Coordinates Manually")
 input_text = st.text_area("Paste coordinates here:", height=250)
