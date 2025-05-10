@@ -37,7 +37,6 @@ You can either:
 # Option to enter address-based locations
 st.subheader("Enter Address Locations")
 num_addresses = st.number_input("How many addresses would you like to enter?", min_value=1, max_value=20, value=3, step=1)
-
 address_inputs = []
 for i in range(num_addresses):
     addr = st.text_input(f"Address {i + 1}")
@@ -49,7 +48,7 @@ if st.button("Fetch Coordinates"):
         if addr:
             lat, lon = get_coordinates(addr)
             if lat is not None and lon is not None:
-                addresses.append((f"Address {i + 1}", lat, lon))
+                addresses.append((addr, lat, lon))
             else:
                 st.warning(f"Could not find coordinates for: {addr}")
 
@@ -85,6 +84,13 @@ if len(locations) >= 2:
         # Convert to DataFrame
         df = pd.DataFrame(locations, columns=['Name', 'Latitude', 'Longitude'])
 
+        # Display list of confirmed locations
+        st.subheader("Confirmed Locations and Coordinates")
+        st.dataframe(df)
+
+        # Shorten names for distance matrix
+        df['ShortName'] = df['Name'].apply(lambda x: ' '.join(x.split()[:2]))
+
         # Create distance matrix
         n = len(df)
         distances = np.zeros((n, n))
@@ -95,8 +101,8 @@ if len(locations) >= 2:
                     distances[i, j] = haversine(df.iloc[i]['Latitude'], df.iloc[i]['Longitude'],
                                                 df.iloc[j]['Latitude'], df.iloc[j]['Longitude'])
 
-        # Display distance matrix
-        dist_df = pd.DataFrame(distances, columns=df['Name'], index=df['Name'])
+        # Display distance matrix with shortened names
+        dist_df = pd.DataFrame(distances, columns=df['ShortName'], index=df['ShortName'])
         st.subheader("Distance Matrix (km)")
         st.dataframe(dist_df.style.format("{:.2f}"))
 
