@@ -161,10 +161,11 @@ try:
     st.subheader("Confirmed Locations and Coordinates")
     st.dataframe(df)
 
+    # Use full name as ShortName and ensure uniqueness
     short_names_seen = {}
     short_names = []
     for name in df['Name']:
-        short = ' '.join(name.split()[:2])
+        short = name
         if short in short_names_seen:
             short_names_seen[short] += 1
             short = f"{short} ({short_names_seen[short]})"
