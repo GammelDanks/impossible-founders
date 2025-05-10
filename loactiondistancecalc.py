@@ -48,7 +48,7 @@ if 'addresses' not in st.session_state:
 
 # Option to enter address-based locations
 st.subheader("Enter Address Locations")
-num_addresses = st.number_input("How many addresses would you like to enter?", min_value=1, max_value=20, value=3, step=1)
+num_addresses = st.number_input("How many addresses would you like to enter?", min_value=1, max_value=30, value=3, step=1)
 address_inputs = []
 for i in range(num_addresses):
     addr = st.text_input(f"Address {i + 1}", key=f"addr_{i}")
