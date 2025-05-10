@@ -48,7 +48,7 @@ if 'addresses' not in st.session_state:
 
 # Option to enter address-based locations
 st.subheader("Enter Address Locations")
-num_addresses = st.number_input("How many addresses would you like to enter?", min_value=1, max_value=30, value=3, step=1)
+num_addresses = st.number_input("How many addresses would you like to enter?", min_value=1, max_value=100, value=3, step=1)
 address_inputs = []
 for i in range(num_addresses):
     addr = st.text_input(f"Address {i + 1}", key=f"addr_{i}")
@@ -100,20 +100,20 @@ if len(locations) < 2 and not st.button("Retry with new input"):
     st.stop()
 
 try:
-    # Convert to DataFrame
-   # Ensure unique names
-names_seen = {}
-unique_locations = []
-for name, lat, lon in locations:
-    base_name = name.strip()
-    if base_name in names_seen:
-        names_seen[base_name] += 1
-        base_name = f\"{base_name} ({names_seen[base_name]})\"
-    else:
-        names_seen[base_name] = 1
-    unique_locations.append((base_name, lat, lon))
+    # Ensure unique names
+    names_seen = {}
+    unique_locations = []
+    for name, lat, lon in locations:
+        base_name = name.strip()
+        if base_name in names_seen:
+            names_seen[base_name] += 1
+            base_name = f"{base_name} ({names_seen[base_name]})"
+        else:
+            names_seen[base_name] = 1
+        unique_locations.append((base_name, lat, lon))
 
-df = pd.DataFrame(unique_locations, columns=['Name', 'Latitude', 'Longitude'])
+    # Convert to DataFrame
+    df = pd.DataFrame(unique_locations, columns=['Name', 'Latitude', 'Longitude'])
 
     # Display list of confirmed locations
     st.subheader("Confirmed Locations and Coordinates")
