@@ -101,7 +101,19 @@ if len(locations) < 2 and not st.button("Retry with new input"):
 
 try:
     # Convert to DataFrame
-    df = pd.DataFrame(locations, columns=['Name', 'Latitude', 'Longitude'])
+   # Ensure unique names
+names_seen = {}
+unique_locations = []
+for name, lat, lon in locations:
+    base_name = name.strip()
+    if base_name in names_seen:
+        names_seen[base_name] += 1
+        base_name = f\"{base_name} ({names_seen[base_name]})\"
+    else:
+        names_seen[base_name] = 1
+    unique_locations.append((base_name, lat, lon))
+
+df = pd.DataFrame(unique_locations, columns=['Name', 'Latitude', 'Longitude'])
 
     # Display list of confirmed locations
     st.subheader("Confirmed Locations and Coordinates")
