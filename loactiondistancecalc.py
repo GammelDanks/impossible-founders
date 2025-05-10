@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import requests
 from math import radians, sin, cos, sqrt, atan2
+from scipy.optimize import minimize
+import folium
+from streamlit_folium import st_folium
 
 # Haversine formula to calculate distance between two lat/lon points
 def haversine(lat1, lon1, lat2, lon2):
@@ -24,6 +27,11 @@ def get_coordinates(address):
             return float(results[0]["lat"]), float(results[0]["lon"])
     except:
         return None, None
+
+# Objective function to minimize average distance to all points
+def average_distance_to_all(x, points):
+    lat, lon = x
+    return np.mean([haversine(lat, lon, p[0], p[1]) for p in points])
 
 # Title
 st.title("Distance Calculator Between Locations")
@@ -120,16 +128,37 @@ try:
     st.write(f"**Average distance:** {avg_distance:.2f} km")
     st.write(f"**Median distance:** {median_distance:.2f} km")
 
-    # Find most central location (lowest average distance to all others)
-    avg_dists = distances.mean(axis=1)
-    median_dists = np.median(distances, axis=1)
-    central_index = np.argmin(avg_dists)
-    central_location = df.iloc[central_index]
-    st.subheader("Most Central Location")
-    st.write(f"**{central_location['Name']}** is the most central location ")
-    st.write(f"**Coordinates:** {central_location['Latitude']}, {central_location['Longitude']}")
-    st.write(f"**Average distance to all others:** {avg_dists[central_index]:.2f} km")
-    st.write(f"**Median distance to all others:** {median_dists[central_index]:.2f} km")
+    # Optimize a hypothetical most central location
+    coords_array = df[['Latitude', 'Longitude']].values
+    lat_init, lon_init = np.mean(coords_array, axis=0)
+    result = minimize(average_distance_to_all, x0=[lat_init, lon_init], args=(coords_array,), method='Nelder-Mead')
+
+    if result.success:
+        optimal_lat, optimal_lon = result.x
+        avg_dist_to_all = average_distance_to_all((optimal_lat, optimal_lon), coords_array)
+        st.subheader("Optimal Hypothetical Central Location")
+        st.write(f"**Coordinates:** {optimal_lat:.6f}, {optimal_lon:.6f}")
+        st.write(f"**Minimum average distance to all others:** {avg_dist_to_all:.2f} km")
+
+        # Visualization map
+        m = folium.Map(location=[optimal_lat, optimal_lon], zoom_start=6)
+        for _, row in df.iterrows():
+            folium.Marker(
+                location=[row['Latitude'], row['Longitude']],
+                tooltip=row['Name'],
+                icon=folium.Icon(color='blue', icon='info-sign')
+            ).add_to(m)
+
+        folium.Marker(
+            location=[optimal_lat, optimal_lon],
+            tooltip="Hypothetical Center",
+            icon=folium.Icon(color='red', icon='star')
+        ).add_to(m)
+
+        st.subheader("Map Visualization")
+        st_folium(m, width=700, height=500)
+    else:
+        st.warning("Could not compute the optimal central location.")
 
     # Allow user to select a location to view average and median distance to others
     if len(df) >= 2:
