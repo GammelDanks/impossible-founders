@@ -138,8 +138,18 @@ try:
     st.subheader("Confirmed Locations and Coordinates")
     st.dataframe(df)
 
-    # Shorten names for distance matrix
-    df['ShortName'] = df['Name'].apply(lambda x: ' '.join(x.split()[:2]))
+    # Create unique short names
+    short_names_seen = {}
+    short_names = []
+    for name in df['Name']:
+        short = ' '.join(name.split()[:2])
+        if short in short_names_seen:
+            short_names_seen[short] += 1
+            short = f"{short} ({short_names_seen[short]})"
+        else:
+            short_names_seen[short] = 1
+        short_names.append(short)
+    df['ShortName'] = short_names
 
     # Create distance matrix
     n = len(df)
