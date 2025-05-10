@@ -37,16 +37,21 @@ You can either:
 # Option to enter address-based locations
 st.subheader("Enter Address Locations")
 num_addresses = st.number_input("How many addresses would you like to enter?", min_value=1, max_value=20, value=3, step=1)
-addresses = []
 
+address_inputs = []
 for i in range(num_addresses):
     addr = st.text_input(f"Address {i + 1}")
-    if addr:
-        lat, lon = get_coordinates(addr)
-        if lat and lon:
-            addresses.append((f"Address {i + 1}", lat, lon))
-        else:
-            st.warning(f"Could not find coordinates for: {addr}")
+    address_inputs.append(addr)
+
+addresses = []
+if st.button("Fetch Coordinates"):
+    for i, addr in enumerate(address_inputs):
+        if addr:
+            lat, lon = get_coordinates(addr)
+            if lat is not None and lon is not None:
+                addresses.append((f"Address {i + 1}", lat, lon))
+            else:
+                st.warning(f"Could not find coordinates for: {addr}")
 
 # Text input for manual coordinates
 st.subheader("Or Paste Coordinates Manually")
