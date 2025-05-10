@@ -42,9 +42,11 @@ You can either:
 - Enter address names below and let the app find their coordinates.
 """)
 
-# Initialize session state for addresses
+# Initialize session state for addresses and failed lookups
 if 'addresses' not in st.session_state:
     st.session_state.addresses = []
+if 'failed_addresses' not in st.session_state:
+    st.session_state.failed_addresses = []
 
 # Option to enter address-based locations
 st.subheader("Enter Address Locations")
@@ -55,7 +57,8 @@ for i in range(num_addresses):
     address_inputs.append(addr)
 
 if st.button("Fetch Coordinates"):
-    st.session_state.addresses = []  # Clear previous entries
+    st.session_state.addresses = []
+    st.session_state.failed_addresses = []
     new_addresses = []
     for i, addr in enumerate(address_inputs):
         if addr and len(addr.strip()) > 2:
@@ -64,8 +67,10 @@ if st.button("Fetch Coordinates"):
                 if lat is not None and lon is not None:
                     new_addresses.append((addr.strip(), lat, lon))
                 else:
+                    st.session_state.failed_addresses.append(addr.strip())
                     st.warning(f"Could not find coordinates for: {addr}")
             except Exception as e:
+                st.session_state.failed_addresses.append(addr.strip())
                 st.warning(f"Error looking up '{addr}': {e}")
     st.session_state.addresses = new_addresses
 
@@ -74,7 +79,8 @@ st.subheader("Or Paste a List of Location Names (One Per Line)")
 bulk_input = st.text_area("Paste locations here:", height=200)
 
 if st.button("Fetch Coordinates from Bulk Input"):
-    st.session_state.addresses = []  # Clear previous entries
+    st.session_state.addresses = []
+    st.session_state.failed_addresses = []
     new_bulk_addresses = []
     for line in bulk_input.strip().split('\n'):
         addr = line.strip()
@@ -84,10 +90,30 @@ if st.button("Fetch Coordinates from Bulk Input"):
                 if lat is not None and lon is not None:
                     new_bulk_addresses.append((addr, lat, lon))
                 else:
+                    st.session_state.failed_addresses.append(addr)
                     st.warning(f"Could not find coordinates for: {addr}")
             except Exception as e:
+                st.session_state.failed_addresses.append(addr)
                 st.warning(f"Error looking up '{addr}': {e}")
     st.session_state.addresses.extend(new_bulk_addresses)
+
+# If there are failed lookups, ask for manual coordinates
+if st.session_state.failed_addresses:
+    st.subheader("Manual Entry for Unresolved Locations")
+    new_manual_entries = []
+    for i, name in enumerate(st.session_state.failed_addresses):
+        lat = st.text_input(f"Latitude for '{name}'", key=f"lat_{i}")
+        lon = st.text_input(f"Longitude for '{name}'", key=f"lon_{i}")
+        if lat and lon:
+            try:
+                lat_val = float(lat)
+                lon_val = float(lon)
+                new_manual_entries.append((name, lat_val, lon_val))
+            except ValueError:
+                st.warning(f"Invalid coordinates for {name}")
+    if st.button("Add Manual Coordinates"):
+        st.session_state.addresses.extend(new_manual_entries)
+        st.session_state.failed_addresses = []
 
 # Text input for manual coordinates
 st.subheader("Or Paste Coordinates Manually")
@@ -97,7 +123,6 @@ locations = st.session_state.addresses[:]
 
 if input_text:
     try:
-        # Parse the input text
         bad_lines = []
         for line in input_text.strip().split('\n'):
             parts = [p.strip() for p in line.split(',')]
@@ -112,7 +137,6 @@ if input_text:
 
         if bad_lines:
             st.warning(f"Skipped {len(bad_lines)} invalid line(s):\n" + '\n'.join(bad_lines))
-
     except Exception as e:
         st.error(f"Error processing input: {e}")
 
@@ -133,14 +157,11 @@ try:
             names_seen[base_name] = 1
         unique_locations.append((base_name, lat, lon))
 
-    # Convert to DataFrame
     df = pd.DataFrame(unique_locations, columns=['Name', 'Latitude', 'Longitude'])
 
-    # Display list of confirmed locations
     st.subheader("Confirmed Locations and Coordinates")
     st.dataframe(df)
 
-    # Create unique short names
     short_names_seen = {}
     short_names = []
     for name in df['Name']:
@@ -153,22 +174,18 @@ try:
         short_names.append(short)
     df['ShortName'] = short_names
 
-    # Create distance matrix
     n = len(df)
     distances = np.zeros((n, n))
-
     for i in range(n):
         for j in range(n):
             if i != j:
                 distances[i, j] = haversine(df.iloc[i]['Latitude'], df.iloc[i]['Longitude'],
                                             df.iloc[j]['Latitude'], df.iloc[j]['Longitude'])
 
-    # Display distance matrix with shortened names
     dist_df = pd.DataFrame(distances, columns=df['ShortName'], index=df['ShortName'])
     st.subheader("Distance Matrix (km)")
     st.dataframe(dist_df.style.format("{:.2f}"))
 
-    # Calculate statistics
     upper_triangle = distances[np.triu_indices(n, k=1)]
     total_distance = upper_triangle.sum()
     avg_distance = upper_triangle.mean()
@@ -179,7 +196,6 @@ try:
     st.write(f"**Average distance:** {avg_distance:.2f} km")
     st.write(f"**Median distance:** {median_distance:.2f} km")
 
-    # Optimize a hypothetical most central location
     coords_array = df[['Latitude', 'Longitude']].values
     lat_init, lon_init = np.mean(coords_array, axis=0)
     result = minimize(average_distance_to_all, x0=[lat_init, lon_init], args=(coords_array,), method='Nelder-Mead')
@@ -191,13 +207,11 @@ try:
         st.write(f"**Coordinates:** {optimal_lat:.6f}, {optimal_lon:.6f}")
         st.write(f"**Minimum average distance to all others:** {avg_dist_to_all:.2f} km")
 
-        # Visualization map
         m = folium.Map(location=[optimal_lat, optimal_lon], zoom_start=6)
 
-        # Add circle to visualize radius
         folium.Circle(
             location=[optimal_lat, optimal_lon],
-            radius=avg_dist_to_all * 1000,  # km to meters
+            radius=avg_dist_to_all * 1000,
             color='red', fill=False,
             tooltip=f"Radius = {avg_dist_to_all:.1f} km"
         ).add_to(m)
@@ -208,8 +222,6 @@ try:
                 tooltip=row['Name'],
                 icon=folium.Icon(color='blue', icon='info-sign')
             ).add_to(m)
-
-            # Line from optimal center to each location
             folium.PolyLine(
                 locations=[[optimal_lat, optimal_lon], [row['Latitude'], row['Longitude']]],
                 color='gray', weight=1, opacity=0.6
@@ -226,7 +238,6 @@ try:
     else:
         st.warning("Could not compute the optimal central location.")
 
-    # Allow user to select a location to view average and median distance to others
     if len(df) >= 2:
         st.subheader("Distance Statistics from a Selected Location")
         selected_location = st.selectbox("Choose a location:", df['Name'])
