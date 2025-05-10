@@ -1,0 +1,9 @@
+streamlit
+openai==0.27.8
+matplotlib
+pandas
+beautifulsoup4
+requests
+spacy
+scipy
+streamlit-folium
