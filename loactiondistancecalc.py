@@ -50,7 +50,7 @@ for i in range(num_addresses):
     addr = st.text_input(f"Address {i + 1}")
     address_inputs.append(addr)
 
-aaddresses = []
+addresses = []
 if st.button("Fetch Coordinates"):
     for i, addr in enumerate(address_inputs):
         if not addr or len(addr.strip()) < 3:
