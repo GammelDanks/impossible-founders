@@ -97,21 +97,20 @@ if st.button("Fetch Coordinates from Bulk Input"):
                 st.warning(f"Error looking up '{addr}': {e}")
     st.session_state.addresses.extend(new_bulk_addresses)
 
-# If there are failed lookups, ask for manual coordinates
+# If there are failed lookups, ask for manual address entry
 if st.session_state.failed_addresses:
-    st.subheader("Manual Entry for Unresolved Locations")
+    st.subheader("Retry Manually for Unresolved Locations")
     new_manual_entries = []
     for i, name in enumerate(st.session_state.failed_addresses):
-        lat = st.text_input(f"Latitude for '{name}'", key=f"lat_{i}")
-        lon = st.text_input(f"Longitude for '{name}'", key=f"lon_{i}")
-        if lat and lon:
+        retry_address = st.text_input(f"Enter full address for '{name}'", key=f"manual_{i}")
+        if retry_address:
             try:
-                lat_val = float(lat)
-                lon_val = float(lon)
-                new_manual_entries.append((name, lat_val, lon_val))
-            except ValueError:
-                st.warning(f"Invalid coordinates for {name}")
-    if st.button("Add Manual Coordinates"):
+                lat, lon = get_coordinates(retry_address)
+                if lat is not None and lon is not None:
+                    new_manual_entries.append((name, lat, lon))
+            except:
+                st.warning(f"Could not retrieve coordinates for '{name}' with manual entry.")
+    if st.button("Add Manually Retrieved Coordinates"):
         st.session_state.addresses.extend(new_manual_entries)
         st.session_state.failed_addresses = []
 
